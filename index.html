@@ -613,6 +613,55 @@ async function startPractice(){
 function mountVideo(id){document.querySelectorAll('#vs button').forEach(x=>x.classList.toggle('sel',x.dataset.id===id));
 document.getElementById('vf').innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1&origin=${encodeURIComponent(location.origin)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><p class="mut" style="font-size:13px">Blank player? Some hosts block embeds, so use “Open this video in YouTube” below.</p>`;
 const a=document.getElementById('oy');a.href='https://www.youtube.com/watch?v='+id;a.hidden=false}
+function poseAt(samples,time){
+  let left=0,right=samples.length;
+  while(left<right){
+    const mid=Math.floor((left+right)/2);
+    if(samples[mid][0]<=time)left=mid+1;else right=mid;
+  }
+  const previous=samples[left-1],next=samples[left];
+  if(!previous || !previous[1] || time-previous[0]>.35)return null;
+  const neutral=A0();
+  const blend=next?.[1] && next[0]-previous[0]<=.35?(time-previous[0])/(next[0]-previous[0]):0;
+  return previous[1].map((a,i)=>{
+    if(a===null)return neutral[i];
+    const b=next?.[1]?.[i];
+    return typeof b==='number'?a+(((b-a+540)%360)-180)*blend:a;
+  });
+}
+async function trySavedTrack(id){
+  const version=generation;
+  try{
+    const response=await fetch('tracks/'+id+'.json');
+    if(!response.ok || version!==generation)return;
+    const track=await response.json();
+    if(track.id!==id || !Array.isArray(track.samples) || !track.samples.length)return;
+    await youtubeAPI();if(version!==generation)return;
+    const frame=document.querySelector('#vf iframe');
+    player=new YT.Player(frame,{events:{
+      onReady:event=>{
+        if(version!==generation)return;
+        const active=event.target;
+        phase='saved';setManualControls(false);
+        control().textContent='Press play to follow the first 30 seconds.';
+        document.getElementById('sd').textContent='';
+        let stopped=false;
+        function sync(){
+          if(version!==generation)return;
+          const time=active.getCurrentTime();
+          if(time>=30 && !stopped){active.pauseVideo();stopped=true;control().textContent='Practice complete. Rewind the video to repeat.'}
+          if(time<30){stopped=false;const angles=poseAt(track.samples,time);
+            tgt=angles||A0();cur=tgt.slice();
+            control().textContent=active.getPlayerState()===1?(angles?'Follow the dancer.':'Waiting for the dancer to come into view.'):'Press play to follow the first 30 seconds.';
+          }
+          requestAnimationFrame(sync);
+        }
+        active.seekTo(0,true);active.playVideo();sync();
+      },
+      onError:()=>{if(version===generation)playV(id,'This player could not start. Choose another tracking option.')}
+    }});
+  }catch{ /* The existing tab and file options remain available. */ }
+}
 function playV(id,message=''){
   stopPractice();if(selectedVideo!==id)savedClip=null;
   selectedVideo=id;mountVideo(id);updateMode('video');
@@ -620,7 +669,7 @@ function playV(id,message=''){
   for(const key of ['sum','st','sd'])document.getElementById(key).replaceChildren();
   document.getElementById('sn').textContent='Video practice · first 30 seconds';
   practiceReady(message);
-  if(!message){if(savedClip)openClip(savedClip);else if(canSharePlayer())startPractice()}
+  if(!message){if(savedClip)openClip(savedClip);else trySavedTrack(id)}
 }
 function addYT(){const i=document.getElementById('yt'),m=i.value.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);if(!m){i.value='';i.placeholder='That doesn’t look like a YouTube link';return}
 VID[rid].push([m[1],'Your video '+(VID[rid].length+1)]);renderVids();playV(m[1]);i.value=''}
