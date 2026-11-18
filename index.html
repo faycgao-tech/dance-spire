@@ -30,6 +30,9 @@ input[type=text]{font:inherit;padding:10px;border-radius:12px;border:1px solid v
 a{color:#f5b3f0}iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;margin-top:8px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .hs{display:flex;gap:10px;overflow-x:auto;padding:8px 2px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}.hs button{flex:0 0 auto;scroll-snap-align:start;white-space:nowrap}#rest[hidden]{display:none}#ls,#vs{scroll-snap-type:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%)}.hs{scrollbar-width:thin;padding:10px 4px 14px}.sq{width:190px;height:190px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:4px;text-align:left;white-space:normal!important;padding:16px;border-radius:20px;position:relative;background:linear-gradient(160deg,rgba(90,70,210,.55),rgba(190,40,140,.35));transition:transform .15s,box-shadow .15s}.sq:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.35)}.sq .em{font-size:44px;line-height:1;margin-bottom:auto}.sq b{font-size:19px}.sq small{opacity:.85;font-size:13px;line-height:1.3}.sq.sel{background:linear-gradient(160deg,#8b5cf6,#ec4899);border-color:#fff}.sq .rec{position:absolute;top:12px;right:12px;font-style:normal;font-size:11px;background:rgba(255,255,255,.22);padding:2px 8px;border-radius:99px}
+.sq.vc{height:auto;min-height:0;padding:0;overflow:hidden;justify-content:flex-start;gap:0}
+.sq.vc img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.sq.vc b{font-size:14px;line-height:1.3;padding:8px 10px}
 </style></head><body><div class="wrap" id="app"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -116,12 +119,93 @@ for(let c=0;c<3;c++)set.forEach(it=>el.append(mk(it)));
 requestAnimationFrame(()=>{const W=el.children[set.length].offsetLeft-el.children[0].offsetLeft;el.scrollLeft=W;el.onscroll=()=>{if(el.scrollLeft<W*.5)el.scrollLeft+=W;else if(el.scrollLeft>W*1.5)el.scrollLeft-=W}})}
 function sqBtn(cls,em,title,sub,onclick,rec){const b=document.createElement('button');b.className='sq '+cls;b.onclick=onclick;b.innerHTML=`<span class="em">${em}</span><b>${title}</b><small>${sub}</small>${rec?'<i class="rec">★ Recommended</i>':''}`;return b}
 
-const VID={hiphop:[["ujREEgxEP7g","3 Simple Moves for Beginners"],["cI1pSXOohMw","Locking: Leo Walk, Disco Step, Camel Walk"]],latin:[["ahPSa7dYofA","Salsa Basics: Complete Guide"],["0uDm8Tu8kCg","L.A. Style Salsa Basics"],["aV8dS2m9Adc","Salsa Walk-Through: 36 Moves"]],flow:[],party:[],ballet:[],jazz:[],bollywood:[],chinese:[]};
+const VID = {
+  "hiphop": [
+    [
+      "339HjuI61fs",
+      "Could · Keone & Mariel Madrid"
+    ],
+    [
+      "J_YeFNJ9z28",
+      "Geronimo · Keone & Mariel Madrid"
+    ]
+  ],
+  "latin": [
+    [
+      "U7zX_DuQDN4",
+      "Tropical Gem · World Latin Congress"
+    ],
+    [
+      "vAwi-ePchks",
+      "Tropical Gem · Extreme Latin Congress"
+    ]
+  ],
+  "flow": [
+    [
+      "rOykoAbL7t8",
+      "MOTUS II · Nederlands Dans Theater"
+    ],
+    [
+      "dgkknvHaotc",
+      "Once Upon a Dream"
+    ]
+  ],
+  "party": [
+    [
+      "uPna1dIeUHQ",
+      "Cupid Shuffle · Cupid"
+    ],
+    [
+      "TxkVizHNfn8",
+      "Cupid Shuffle, Wobble & Cha Cha Slide"
+    ]
+  ],
+  "ballet": [
+    [
+      "0GsajWIF3ws",
+      "Dance of the Cygnets · Swan Lake"
+    ],
+    [
+      "zV1qLYukTH8",
+      "Sugar Plum Fairy · The Nutcracker"
+    ]
+  ],
+  "jazz": [
+    [
+      "5jio0ZzK4fI",
+      "Rich Man’s Frug · Sweet Charity"
+    ],
+    [
+      "SAWjarAHHKQ",
+      "Sing, Sing, Sing · Fosse"
+    ]
+  ],
+  "bollywood": [
+    [
+      "siq6hwbWtrg",
+      "Dola Re Dola"
+    ],
+    [
+      "8kkZAwFAGiM",
+      "Nagada Sang Dhol · Shikha Kapadia"
+    ]
+  ],
+  "chinese": [
+    [
+      "5Qdlz2yWDFA",
+      "Night Banquet in Tang Dynasty Palace"
+    ],
+    [
+      "yqBvBJg3X0s",
+      "Water Moon Luoshen · Tang Shiyi"
+    ]
+  ]
+};
 function studio(rec){rid=null;inited=false;si=0;best=[];
 app.innerHTML=`<h1 class="grad">Dance Studio</h1>
 <div class="card"><b>1. Pick a dance style</b><div class="hs" id="ls"></div></div>
 <div id="rest" hidden>
-<div class="card"><b>2. Watch a lesson</b><div class="hs" id="vs"></div><div id="vf"></div>
+<div class="card"><b>2. Watch a performance</b><div class="hs" id="vs"></div><div id="vf"></div>
 <div class="row" style="margin-top:8px"><a id="oy" target="_blank" rel="noopener" hidden>Open this video in YouTube ↗</a><a id="sm" target="_blank" rel="noopener">Find more on YouTube ↗</a></div>
 <div class="row" style="margin-top:10px"><input type="text" id="yt" placeholder="Paste your own YouTube link" style="flex:1;min-width:200px"><button id="ytb">Add to list</button></div></div>
 <div class="grid"><div class="card"><div id="stage"></div><div class="steps" id="st"></div><h3 id="sn"></h3><p class="mut" id="sd"></p>
@@ -138,10 +222,22 @@ vid=g('v');ov=g('ov')}
 function pick(k){rid=k;si=0;best=[];photoImg=null;document.querySelectorAll('#ls button').forEach(b=>b.classList.toggle('sel',b.dataset.k===k));
 document.getElementById('rest').hidden=false;document.getElementById('sum').innerHTML='';
 if(!inited){initThree();inited=true;if(!run){run=true;anim()}}
-cur=A0();document.getElementById('sm').href='https://www.youtube.com/results?search_query='+encodeURIComponent(R[k].q);renderVids();show()}
+cur=A0();document.getElementById('sm').href='https://www.youtube.com/results?search_query='+encodeURIComponent(R[k].n + ' dance performance');renderVids();show()}
 function renderVids(){const vs=document.getElementById('vs');document.getElementById('vf').innerHTML='';document.getElementById('oy').hidden=true;
 if(!VID[rid].length){vs.onscroll=null;vs.innerHTML='<span class="mut">No curated videos for this style yet. Paste a link below or search YouTube.</span>';return}
-carousel(vs,VID[rid],v=>{const b=sqBtn('vc','▶',v[1],'Tap to watch here',()=>playV(v[0]));b.dataset.id=v[0];return b})}
+vs.replaceChildren(...VID[rid].map(([id, title]) => {
+  const card = btn('', () => playV(id));
+  card.className = 'sq vc';
+  card.dataset.id = id;
+  const thumbnail = document.createElement('img');
+  thumbnail.src = 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg';
+  thumbnail.alt = '';
+  const caption = document.createElement('b');
+  caption.textContent = title;
+  card.append(thumbnail, caption);
+  return card;
+}));
+}
 
 function playV(id,b){document.querySelectorAll('#vs button').forEach(x=>x.classList.toggle('sel',x.dataset.id===id));
 document.getElementById('vf').innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><p class="mut" style="font-size:13px">Blank player? Some hosts block embeds, so use “Open this video in YouTube” below.</p>`;
