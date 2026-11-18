@@ -434,6 +434,7 @@ vs.replaceChildren(...VID[rid].map(([id, title]) => {
 let phase='manual', selectedVideo='', generation=0, tutorialTimer, capture, referenceModel, player, apiPromise, poseScript;
 const control=()=>document.getElementById('practiceControls');
 function stopPractice(){
+  clearLocalClip();
   generation++;
   clearInterval(tutorialTimer);
   capture?.getTracks().forEach(track=>track.stop()); capture=null;
@@ -449,12 +450,16 @@ function beginTutorial(){
   clearInterval(tutorialTimer);
   tutorialTimer=setInterval(()=>{
     if(si<3){si++;show();return}
-    clearInterval(tutorialTimer);practiceReady('Tutorial complete. To match the dancer, share this Dance Spire tab when prompted.');
+    clearInterval(tutorialTimer);practiceReady('Tutorial complete.');
   },2000);
 }
 function practiceReady(message){
   phase='ready';
-  control().replaceChildren(document.createTextNode(message+' '),btn('Match 30 seconds',startPractice),btn('Replay tutorial',beginTutorial));
+  const share=!!(window.CropTarget && navigator.mediaDevices?.getDisplayMedia && window.BrowserCaptureMediaStreamTrack?.prototype.cropTo);
+  const hint=share?'':' Choose a video file of the selected dance for the 30-second match.';
+  control().replaceChildren(document.createTextNode(message+hint+' '));
+  if(share)control().append(btn('Match video by sharing this tab',startPractice));
+  control().append(btn('Choose dance video file',chooseClip),btn('Replay tutorial',beginTutorial));
 }
 function youtubeAPI(){
   if(window.YT?.Player)return Promise.resolve();
@@ -470,9 +475,76 @@ function poseLibrary(){
   if(!poseScript)poseScript=ld(BASE+'pose.js').catch(error=>{poseScript=null;throw error});
   return poseScript;
 }
+async function referenceTracker(feed,current){
+    const model=new Pose({locateFile:file=>BASE+file});referenceModel=model;
+    model.setOptions({modelComplexity:0,smoothLandmarks:true});
+    let seen=false;
+    model.onResults(result=>{
+      if(!current())return;
+      const points=result.poseLandmarks;
+      seen=!!points && M.filter(([a,b])=>Math.min(points[a].visibility,points[b].visibility)>.45).length>=5;
+      if(!seen){tgt=A0();return}
+      tgt=M.map(([a,b,i])=>Math.min(points[a].visibility,points[b].visibility)<.45?tgt[i]:
+        Math.atan2(-(points[b].x-points[a].x)*feed.videoWidth,(points[b].y-points[a].y)*feed.videoHeight)*180/Math.PI);
+    });
+    await model.initialize();
+    return {model, visible:()=>seen};
+}
+let localVideo, localUrl;
+function clearLocalClip(){
+  if(localVideo){localVideo.pause();localVideo.removeAttribute('src');localVideo.load();localVideo.remove();localVideo=null}
+  if(localUrl){URL.revokeObjectURL(localUrl);localUrl=null}
+}
+function chooseClip(){
+  const input=document.createElement('input');
+  input.type='file';input.accept='video/*';
+  input.onchange=()=>{if(input.files[0])openClip(input.files[0])};
+  input.click();
+}
+function openClip(file){
+  stopPractice();phase='clip';
+  const version=generation, current=()=>version===generation;
+  const id=selectedVideo;
+  const finish=message=>{
+    if(!current())return;
+    playV(id);clearInterval(tutorialTimer);practiceReady(message);
+  };
+  const video=document.createElement('video');localVideo=video;
+  video.controls=true;video.playsInline=true;video.style.width='100%';
+  localUrl=URL.createObjectURL(file);video.src=localUrl;
+  document.getElementById('vf').replaceChildren(video);
+  video.onerror=()=>finish('This file could not play. Try another video file.');
+  const match=btn('Start matching',async()=>{
+    if(!current() || match.disabled)return;
+    match.disabled=true;phase='starting';video.pause();
+    const start=Math.min(video.currentTime,Math.max(0,video.duration-30));
+    video.currentTime=start;
+    try{
+      notice.textContent='Loading pose tracking… ';
+      await poseLibrary();if(!current())return;
+      const {model,visible}=await referenceTracker(video,current);if(!current())return;
+      phase='practice';video.controls=true;
+      document.getElementById('st').replaceChildren();
+      document.getElementById('sn').textContent='Follow the video';
+      document.getElementById('sd').textContent=file.name;
+      await video.play().catch(()=>{});
+      while(current()){
+        const elapsed=video.currentTime-start;
+        if(video.ended || elapsed>=30){finish('Practice complete.');return}
+        notice.textContent=Math.max(0,Math.floor(elapsed))+' / '+Math.ceil(Math.min(30,video.duration-start))+' s · '+(video.paused?'Press play on the clip.':visible()?'Follow the dancer.':'Looking for a dancer.');
+        if(!video.paused && video.readyState>=2)await model.send({image:video});
+        await new Promise(resolve=>setTimeout(resolve,40));
+      }
+    }catch(error){finish('Tracking could not continue. Check your connection and try a playable clip.')}
+  });
+  const notice=document.createElement('span');
+  notice.textContent='Choose a starting point in your clip, then start matching. ';
+  match.disabled=true;video.onloadedmetadata=()=>{match.disabled=!Number.isFinite(video.duration)};
+  control().replaceChildren(notice,match,btn('Cancel',()=>finish('Practice stopped.')));
+}
 async function startPractice(){
   if(!window.CropTarget || !navigator.mediaDevices?.getDisplayMedia){
-    practiceReady('Video matching requires desktop Chrome or Edge with tab sharing.');return;
+    chooseClip();return;
   }
   phase='starting';const version=++generation;
   const current=()=>version===generation;
@@ -493,18 +565,7 @@ async function startPractice(){
     if(!current())return;
     const feed=document.createElement('video');feed.muted=true;feed.playsInline=true;feed.srcObject=media;await feed.play();
     if(!current())return;
-    const model=new Pose({locateFile:file=>BASE+file});referenceModel=model;
-    model.setOptions({modelComplexity:0,smoothLandmarks:true});
-    let seen=false;
-    model.onResults(result=>{
-      if(!current())return;
-      const points=result.poseLandmarks;
-      seen=!!points && M.filter(([a,b])=>Math.min(points[a].visibility,points[b].visibility)>.45).length>=5;
-      if(!seen){tgt=A0();return}
-      tgt=M.map(([a,b,i])=>Math.min(points[a].visibility,points[b].visibility)<.45?tgt[i]:
-        Math.atan2(-(points[b].x-points[a].x)*feed.videoWidth,(points[b].y-points[a].y)*feed.videoHeight)*180/Math.PI);
-    });
-    await model.initialize();
+    const {model,visible}=await referenceTracker(feed,current);
     if(!current())return;
     await new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>reject(Error('Video player timed out.')),15000);
@@ -522,7 +583,7 @@ async function startPractice(){
       const elapsed=Math.max(0,player.getCurrentTime()-start);
       if(elapsed>=30 || player.getPlayerState()===0){reset('Practice complete.');return}
       const playing=player.getPlayerState()===1;
-      status.textContent=Math.floor(elapsed)+' / 30 s · '+(!playing?'Press play in the video.':seen?'Follow the dancer.':'Looking for a visible dancer.');
+      status.textContent=Math.floor(elapsed)+' / 30 s · '+(!playing?'Press play in the video.':visible()?'Follow the dancer.':'Looking for a visible dancer.');
       if(playing && feed.readyState>=2)await model.send({image:feed});
       await new Promise(resolve=>setTimeout(resolve,40));
     }
