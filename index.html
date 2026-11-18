@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dance Spire</title>
+<style>
+:root{--bg:#1a1a6e;--card:rgba(32,24,102,.62);--ink:#f6f0ff;--mut:#c1b3e8;--ac:#8b5cf6;--ac2:#ec4899;--line:rgba(200,150,255,.3);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1a6e;--card:rgba(32,24,102,.62);--ink:#f6f0ff;--mut:#c1b3e8;--line:rgba(200,150,255,.3)}}
+:root[data-theme="dark"]{--bg:#1a1a6e;--card:rgba(32,24,102,.62);--ink:#f6f0ff;--mut:#c1b3e8;--line:rgba(200,150,255,.3)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#2b1a6b linear-gradient(160deg,#0c1d6b 0%,#2f1b82 45%,#6d1f93 75%,#b8208a 100%) fixed;color:var(--ink);font:17px/1.55 Georgia,"Times New Roman",Times,serif}
+.wrap{max-width:1000px;margin:0 auto;padding:20px}
+h1,h2,h3{margin:.2em 0}.grad{background:linear-gradient(90deg,var(--ac),var(--ac2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:12px 0}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 16px;border-radius:12px}
+button:hover{border-color:var(--ac)}button.sel{background:var(--ac);color:#fff;border-color:var(--ac)}
+button.main{background:linear-gradient(90deg,var(--ac),var(--ac2));color:#fff;border:0;font-weight:600}
+.prog{height:6px;background:var(--line);border-radius:9px;overflow:hidden}.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .3s}
+.mut{color:var(--mut)}.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+#stage{width:100%;height:380px;border-radius:12px;background:radial-gradient(circle at 50% 30%,#8a35c9,#2e1d8a 55%,#101a5c)}
+.cam{position:relative;width:100%;aspect-ratio:4/3;background:#12154f;border-radius:12px;overflow:hidden}
+.cam video,.cam canvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);object-fit:cover}
+.bar{height:26px;background:var(--line);border-radius:14px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e);transition:width .12s}
+.bar b{position:absolute;left:80%;top:0;bottom:0;width:2px;background:var(--ink);opacity:.6}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.steps span{padding:4px 10px;border-radius:99px;border:1px solid var(--line);font-size:13px}
+.steps .on{background:var(--ac);color:#fff;border-color:var(--ac)}.steps .done{border-color:#22c55e;color:#22c55e}
+input[type=text]{font:inherit;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(10,14,70,.55);color:var(--ink);width:100%}
+a{color:#f5b3f0}iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;margin-top:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hs{display:flex;gap:10px;overflow-x:auto;padding:8px 2px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}.hs button{flex:0 0 auto;scroll-snap-align:start;white-space:nowrap}#rest[hidden]{display:none}#ls,#vs{scroll-snap-type:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%)}.hs{scrollbar-width:thin;padding:10px 4px 14px}.sq{width:190px;height:190px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:4px;text-align:left;white-space:normal!important;padding:16px;border-radius:20px;position:relative;background:linear-gradient(160deg,rgba(90,70,210,.55),rgba(190,40,140,.35));transition:transform .15s,box-shadow .15s}.sq:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.35)}.sq .em{font-size:44px;line-height:1;margin-bottom:auto}.sq b{font-size:19px}.sq small{opacity:.85;font-size:13px;line-height:1.3}.sq.sel{background:linear-gradient(160deg,#8b5cf6,#ec4899);border-color:#fff}.sq .rec{position:absolute;top:12px;right:12px;font-style:normal;font-size:11px;background:rgba(255,255,255,.22);padding:2px 8px;border-radius:99px}
+</style></head><body><div class="wrap" id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Pose = screen-plane limb angles in degrees [L upper arm, L forearm, R upper arm, R forearm, L thigh, L shin, R thigh, R shin]; 0 = down, 90 = toward screen-right, 180 = up
+const R={
+hiphop:{n:"Hip Hop Bounce",d:"Grounded, rhythmic, bouncy",q:"hip hop dance tutorial for beginners",steps:[
+["Bounce stance","Soften your knees and let your arms hang loose.",[-20,-10,20,10,-18,6,18,-6]],
+["Arms wide","Open both arms out to the sides like a T.",[-90,-90,90,90,-18,6,18,-6]],
+["Right reach","Right arm reaches up, left stays low.",[-15,-20,160,170,-18,6,18,-6]],
+["Left reach","Switch: left arm reaches up.",[-160,-170,15,20,-18,6,18,-6]],
+["Wide squat","Hands to knees, sit into a wide stance.",[-35,-30,35,30,-40,5,40,-5]]]},
+latin:{n:"Latin Basics",d:"Hips, rhythm and partner-style flair",q:"salsa basic step tutorial beginners",steps:[
+["Home position","Hands on hips, feet under you.",[-35,50,35,-50,-4,-2,4,2]],
+["Step left","Open arms low as you step left.",[-50,-60,50,60,-28,-28,4,2]],
+["Step right","Mirror it to the right.",[-50,-60,50,60,-4,-2,28,28]],
+["Right hand high","Right arm up, left hand stays on hip.",[-35,50,150,165,-4,-2,4,2]],
+["Back step, arms out","Step back, arms open wide.",[-70,-80,70,80,8,8,-8,-8]]]},
+flow:{n:"Contemporary Flow",d:"Lyrical, grounded, expressive lines",q:"contemporary dance tutorial for beginners",steps:[
+["First position","Arms softly rounded in front.",[-15,10,15,-10,-3,-2,3,2]],
+["Second position","Arms extend out, slightly lower than shoulders.",[-80,-85,80,85,-4,-2,4,2]],
+["Fifth overhead","Arms form a soft oval above your head.",[-155,170,155,-170,-3,-2,3,2]],
+["Plié","Bend the knees out over your toes.",[-80,-85,80,85,-30,25,30,-25]],
+["Side tendu","Extend the left leg out to the side.",[-90,-90,90,90,-45,-45,3,2]]]},
+party:{n:"Party Groove",d:"Fun, social, club-ready moves",q:"easy party dance moves tutorial",steps:[
+["Disco point","Right arm points up diagonally.",[-15,-10,135,135,-4,-2,4,2]],
+["Hands up","Both arms high in a V.",[-165,-175,165,175,-12,6,12,-6]],
+["Elbows in","Elbows tucked, hands up at shoulders.",[-30,60,30,-60,-4,-2,4,2]],
+["Big clap","Hands meet overhead.",[-170,175,170,-175,-4,-2,4,2]],
+["Sprinkler","Right arm up, left arm out.",[-90,-60,90,150,-8,-4,8,4]]]},
+ballet:{n:"Ballet",d:"Classical positions, poise and posture",q:"ballet basics for beginners at home",steps:[
+["Preparatory position","Arms softly low, shoulders relaxed.",[-12,6,12,-6,-3,-2,3,2]],
+["First position arms","Round the arms in front, as if holding a large ball.",[-25,15,25,-15,-3,-2,3,2]],
+["Second position","Open the arms wide with soft elbows.",[-80,-85,80,85,-3,-2,3,2]],
+["Fifth position","Arms form an oval overhead.",[-155,170,155,-170,-3,-2,3,2]],
+["Grand plié in second","Bend deeply with knees over toes, arms open.",[-80,-85,80,85,-35,30,35,-30]]]},
+jazz:{n:"Jazz",d:"Sharp, sassy and theatrical",q:"jazz dance tutorial for beginners",steps:[
+["Jazz hands","Arms up and out wide, fingers spread.",[-130,-140,130,140,-6,-3,6,3]],
+["Wide lunge","Arms in a T, step into a wide stance.",[-90,-90,90,90,-30,-8,30,8]],
+["Side kick","Arms in a high V, left leg extends to the side.",[-150,-160,150,160,-40,-40,3,2]],
+["Hip and reach","Left hand on hip, right arm reaches high.",[-35,50,160,170,-6,-3,6,3]],
+["Attitude arms","Left arm high, right arm out to the side.",[-160,-170,90,90,-4,-2,12,12]]]},
+bollywood:{n:"Bollywood",d:"Expressive, rhythmic storytelling",q:"bollywood dance tutorial for beginners",steps:[
+["Namaste start","Hands together at your chest.",[-25,70,25,-70,-4,-2,4,2]],
+["Open arms","Open wide with a big, welcoming smile.",[-100,-105,100,105,-10,4,10,-4]],
+["Point to the sky","Left arm up high, right hand on hip.",[-165,-170,35,-50,-8,-3,8,3]],
+["Lotus hands","Both arms up in a graceful V.",[-140,-160,140,160,-6,-3,6,3]],
+["Hip sway","Arms low and relaxed, soften the knees.",[-45,-20,45,20,-14,4,14,-4]]]},
+chinese:{n:"Chinese Classical",d:"Flowing, elegant and symbolic",q:"chinese classical dance tutorial beginners",steps:[
+["Ready stance","Stand tall with rounded arms.",[-15,10,15,-10,-3,-2,3,2]],
+["Wide sweep","Arms sweep out like flowing sleeves.",[-70,-80,70,80,-6,-3,6,3]],
+["Cloud hands","Left arm low and out, right arm rises high.",[-60,-30,150,170,-6,-3,6,3]],
+["Bow stance sweep","Wide stance, left arm sweeps out, right arm angled.",[-100,-110,60,40,-30,-5,30,5]],
+["Crane pose","Arms rise overhead as the right knee lifts.",[-135,-150,135,150,-3,-2,40,-10]]]}};
+const A={},app=document.getElementById('app');let qi=0;
+const SM={Ballet:'ballet',Contemporary:'flow',Jazz:'jazz',Bollywood:'bollywood',Chinese:'chinese',"Hip hop":'hiphop',Breaking:'hiphop',Salsa:'latin',Ballroom:'latin',Bachata:'latin',"K-pop":'party',Club:'party',Social:'party'};
+function seq(){return A.exp==='none'?['exp','flex','coord','tempo','goal']:['exp','styles','conf','tempo','goal']}
+const Q={exp:{t:"How much dance experience do you have?",o:[["none","None, I’m brand new"],["some","Some, I’ve taken a few classes or learned moves"],["lots","A lot, I dance regularly"]]},
+styles:{t:"Which styles have you done before?",m:1,o:["Ballet","Contemporary","Jazz","Hip hop","Breaking","Salsa","Ballroom","Bachata","K-pop","Club","Social","Bollywood","Chinese","Other"]},
+conf:{t:"How confident are you learning choreography from a video? (1–10)",s:1},
+flex:{t:"How flexible are you? (1 = stiff, 10 = very bendy)",s:1},
+coord:{t:"How coordinated are you? (1–10)",s:1},
+tempo:{t:"Do you prefer fast or slow movements?",o:[["fast","Fast and energetic"],["slow","Slow and flowing"],["mix","A mix of both"]]},
+goal:{t:"What’s your main goal?",o:[["fun","Just have fun"],["fit","Get a workout"],["social","Dance at parties and events"],["perform","Perform or improve technique"]]}};
+function quiz(){const k=seq()[qi],q=Q[k],tot=seq().length;let h=`<h1 class="grad">Dance Spire 💃</h1><p class="mut">Answer a few quick questions and we’ll find your dancer type.</p><div class="card"><div class="prog"><i style="width:${qi/tot*100}%"></i></div><h2>${q.t}</h2><div class="opts" id="o"></div></div>`;app.innerHTML=h;const o=document.getElementById('o');
+if(q.s){for(let i=1;i<=10;i++)o.append(btn(i,()=>ans(k,i)))}
+else if(q.m){const sel=new Set();q.o.forEach(x=>{const b=btn(x,()=>{sel.has(x)?sel.delete(x):sel.add(x);b.classList.toggle('sel')});o.append(b)});const c=btn("Continue →",()=>ans(k,[...sel]));c.className='main';o.append(c)}
+else q.o.forEach(([v,l])=>o.append(btn(l,()=>ans(k,v))))}
+function btn(t,f){const b=document.createElement('button');b.textContent=t;b.onclick=f;return b}
+function ans(k,v){A[k]=v;qi++;qi>=seq().length?result():quiz()}
+function recommend(){const s={flow:0,hiphop:0,latin:0,party:0,ballet:0,jazz:0,bollywood:0,chinese:0};(A.styles||[]).forEach(x=>{if(SM[x])s[SM[x]]+=2});
+if(A.exp==='none'){const f=A.flex,c=A.coord;if(A.tempo==='fast')s[c>=6?'hiphop':'party']+=2;else if(A.tempo==='slow')s[f>=6?'ballet':'chinese']+=2;else{s.bollywood+=2;s.latin++;s.jazz++}}
+else{if(A.tempo==='fast'){s.hiphop++;s.party++}if(A.tempo==='slow'){s.flow++;s.latin++}}
+if(A.goal==='social'){s.party++;s.latin++}if(A.goal==='fit'){s.hiphop++}if(A.goal==='perform'){s.flow++;s.jazz++}
+return Object.entries(s).sort((a,b)=>b[1]-a[1])[0][0]}
+function result(){const id=recommend(),lv={none:"Beginner",some:"Intermediate",lots:"Advanced"}[A.exp];A.pick=id;
+app.innerHTML=`<h1 class="grad">Your dancer type</h1><div class="card"><h2>${lv} · ${R[id].n} Dancer</h2><p>${R[id].d}. We’ll start you with a ${R[id].n} routine${A.exp==='none'?', taking it slow and keeping poses simple':', with room to level up'}.</p><button class="main" id="go">Enter the studio →</button></div>`;document.getElementById('go').onclick=()=>studio(id)}
+
+// ---------- Studio ----------
+let rid,si,cur,tgt,scene,cam,ren,bones={},joints={},run=false,pose,vid,ov,score=0,hold=0,best=[],stream,camOn=false;
+let inited=false,photoImg=null,use2d=false,c2;
+const EM={hiphop:'🎧',latin:'💃',flow:'🌊',party:'🪩',ballet:'🩰',jazz:'🎷',bollywood:'🪔',chinese:'🏮'};
+function carousel(el,items,mk){el.innerHTML='';el.onscroll=null;if(!items.length)return;const n=items.length,per=Math.max(1,Math.ceil((el.clientWidth||900)*1.3/(n*204))),set=[];for(let i=0;i<per;i++)set.push(...items);
+for(let c=0;c<3;c++)set.forEach(it=>el.append(mk(it)));
+requestAnimationFrame(()=>{const W=el.children[set.length].offsetLeft-el.children[0].offsetLeft;el.scrollLeft=W;el.onscroll=()=>{if(el.scrollLeft<W*.5)el.scrollLeft+=W;else if(el.scrollLeft>W*1.5)el.scrollLeft-=W}})}
+function sqBtn(cls,em,title,sub,onclick,rec){const b=document.createElement('button');b.className='sq '+cls;b.onclick=onclick;b.innerHTML=`<span class="em">${em}</span><b>${title}</b><small>${sub}</small>${rec?'<i class="rec">★ Recommended</i>':''}`;return b}
+
+const VID={hiphop:[["ujREEgxEP7g","3 Simple Moves for Beginners"],["cI1pSXOohMw","Locking: Leo Walk, Disco Step, Camel Walk"]],latin:[["ahPSa7dYofA","Salsa Basics: Complete Guide"],["0uDm8Tu8kCg","L.A. Style Salsa Basics"],["aV8dS2m9Adc","Salsa Walk-Through: 36 Moves"]],flow:[],party:[],ballet:[],jazz:[],bollywood:[],chinese:[]};
+function studio(rec){rid=null;inited=false;si=0;best=[];
+app.innerHTML=`<h1 class="grad">Dance Studio</h1>
+<div class="card"><b>1. Pick a dance style</b><div class="hs" id="ls"></div></div>
+<div id="rest" hidden>
+<div class="card"><b>2. Watch a lesson</b><div class="hs" id="vs"></div><div id="vf"></div>
+<div class="row" style="margin-top:8px"><a id="oy" target="_blank" rel="noopener" hidden>Open this video in YouTube ↗</a><a id="sm" target="_blank" rel="noopener">Find more on YouTube ↗</a></div>
+<div class="row" style="margin-top:10px"><input type="text" id="yt" placeholder="Paste your own YouTube link" style="flex:1;min-width:200px"><button id="ytb">Add to list</button></div></div>
+<div class="grid"><div class="card"><div id="stage"></div><div class="steps" id="st"></div><h3 id="sn"></h3><p class="mut" id="sd"></p>
+<div class="row"><button id="pv">← Back</button><button id="rp">Replay pose</button><button id="nx" class="main">Next →</button></div></div>
+<div class="card"><div class="cam"><video id="v" playsinline muted></video><canvas id="ov"></canvas></div>
+<div class="row" style="margin:10px 0"><button id="cb" class="main">Start camera</button><button id="pb">📸 Photo check</button><button id="mm">✓ I matched it</button><input type="file" id="ph" accept="image/*" capture="user" hidden></div>
+<div class="row"><b>Match</b><span id="pc" class="mut">0%</span><span class="mut" id="msg"></span></div>
+<div class="bar"><i id="fill"></i><b></b></div><p class="mut" style="font-size:13px">Stand back so your whole body is visible. Hold a pose above 80% to advance. Nothing is uploaded.</p><div id="sum"></div></div></div></div>`;
+carousel(document.getElementById('ls'),Object.keys(R),k=>{const b=sqBtn('',EM[k],R[k].n,R[k].d,()=>pick(k),k===rec);b.dataset.k=k;return b});
+const g=i=>document.getElementById(i);g('ytb').onclick=addYT;g('nx').onclick=()=>go(1);g('pv').onclick=()=>go(-1);
+g('rp').onclick=()=>{cur=A0();hold=0};g('mm').onclick=()=>{best[si]=Math.max(best[si]||0,score||.8);go(1)};
+g('cb').onclick=startCam;g('pb').onclick=()=>g('ph').click();g('ph').onchange=e=>photo(e.target.files[0]);
+vid=g('v');ov=g('ov')}
+function pick(k){rid=k;si=0;best=[];photoImg=null;document.querySelectorAll('#ls button').forEach(b=>b.classList.toggle('sel',b.dataset.k===k));
+document.getElementById('rest').hidden=false;document.getElementById('sum').innerHTML='';
+if(!inited){initThree();inited=true;if(!run){run=true;anim()}}
+cur=A0();document.getElementById('sm').href='https://www.youtube.com/results?search_query='+encodeURIComponent(R[k].q);renderVids();show()}
+function renderVids(){const vs=document.getElementById('vs');document.getElementById('vf').innerHTML='';document.getElementById('oy').hidden=true;
+if(!VID[rid].length){vs.onscroll=null;vs.innerHTML='<span class="mut">No curated videos for this style yet. Paste a link below or search YouTube.</span>';return}
+carousel(vs,VID[rid],v=>{const b=sqBtn('vc','▶',v[1],'Tap to watch here',()=>playV(v[0]));b.dataset.id=v[0];return b})}
+
+function playV(id,b){document.querySelectorAll('#vs button').forEach(x=>x.classList.toggle('sel',x.dataset.id===id));
+document.getElementById('vf').innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><p class="mut" style="font-size:13px">Blank player? Some hosts block embeds, so use “Open this video in YouTube” below.</p>`;
+const a=document.getElementById('oy');a.href='https://www.youtube.com/watch?v='+id;a.hidden=false}
+function addYT(){const i=document.getElementById('yt'),m=i.value.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);if(!m){i.value='';i.placeholder='That doesn’t look like a YouTube link';return}
+VID[rid].push([m[1],'Your video '+(VID[rid].length+1)]);renderVids();playV(m[1]);i.value=''}
+function A0(){return [-8,-5,8,5,-4,-2,4,2]}
+function show(){const s=R[rid].steps;tgt=s[si][2];hold=0;
+document.getElementById('st').innerHTML=s.map((x,i)=>`<span class="${i===si?'on':best[i]?'done':''}">${i+1}. ${x[0]}</span>`).join('');
+document.getElementById('sn').textContent=`Step ${si+1}: ${s[si][0]}`;document.getElementById('sd').textContent=s[si][1]}
+function go(d){const n=R[rid].steps.length;if(si+d>=n){finish();return}si=Math.max(0,si+d);show()}
+function finish(){const v=R[rid].steps.map((_,i)=>best[i]||0),av=Math.round(v.reduce((a,b)=>a+b,0)/v.length*100);
+document.getElementById('sum').innerHTML=`<div class="card"><h3>🎉 Routine complete!</h3><p>Average best match: <b>${av}%</b></p><button id="ag">Try again</button></div>`;document.getElementById('ag').onclick=()=>{best=[];si=0;show();document.getElementById('sum').innerHTML=''}}
+// ---------- 3D figure ----------
+const L={ua:.55,fa:.5,th:.75,sh:.75},SW=.38,HW=.2;
+function initThree(){try{init3()}catch(e){init2d()}}
+function init2d(){use2d=true;const el=document.getElementById('stage');el.innerHTML='<canvas style="width:100%;height:100%"></canvas>';c2=el.firstChild;c2.width=Math.max(300,el.clientWidth)*2;c2.height=Math.max(300,el.clientHeight)*2}
+function draw2d(a,t){const c=c2.getContext('2d'),W=c2.width,H=c2.height;c.clearRect(0,0,W,H);const bob=Math.sin(t*3)*.02,S=H/4.3,ox=W/2,oy=H*.5;const X=p=>ox+p[0]*S,Y=p=>oy-p[1]*S;
+const pel=[0,bob],ne=[0,1+bob],ls=[-SW/2,ne[1]-.05],rs=[SW/2,ne[1]-.05],lh=[-HW,bob],rh=[HW,bob];const le=pt(ls,L.ua,a[0]),lw=pt(le,L.fa,a[1]),re=pt(rs,L.ua,a[2]),rw=pt(re,L.fa,a[3]),lk=pt(lh,L.th,a[4]),la=pt(lk,L.sh,a[5]),rk=pt(rh,L.th,a[6]),ra=pt(rk,L.sh,a[7]);
+c.lineCap='round';c.lineWidth=S*.2;const seg=(p,q,col)=>{c.strokeStyle=col;c.beginPath();c.moveTo(X(p),Y(p));c.lineTo(X(q),Y(q));c.stroke()};const P='#8b5cf6',K='#ec4899';
+seg(pel,ne,P);seg(ls,rs,P);seg(lh,rh,P);seg(ls,le,P);seg(le,lw,P);seg(rs,re,K);seg(re,rw,K);seg(lh,lk,P);seg(lk,la,P);seg(rh,rk,K);seg(rk,ra,K);
+c.fillStyle=K;c.beginPath();c.arc(ox,Y([0,ne[1]+.3]),S*.24,0,7);c.fill();c.fillStyle='rgba(255,255,255,.15)';c.beginPath();c.ellipse(ox,oy+1.55*S,S*1.2,S*.18,0,0,7);c.fill()}
+function init3(){const el=document.getElementById('stage');scene=new THREE.Scene();ren=new THREE.WebGLRenderer({antialias:true,alpha:true});ren.setSize(el.clientWidth,el.clientHeight);el.append(ren.domElement);
+cam=new THREE.PerspectiveCamera(40,el.clientWidth/el.clientHeight,.1,50);scene.add(new THREE.AmbientLight(0xffffff,.7));const dl=new THREE.DirectionalLight(0xffffff,.9);dl.position.set(2,4,5);scene.add(dl);
+const gm=new THREE.MeshStandardMaterial({color:0xec4899}),bm=new THREE.MeshStandardMaterial({color:0x8b5cf6});
+['lua','lfa','rua','rfa','lth','lsh','rth','rsh','torso'].forEach(k=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,1,14),k==='torso'?bm:(k[0]==='l'?bm:gm));if(k==='torso')m.geometry=new THREE.CylinderGeometry(.2,.17,1,16);scene.add(m);bones[k]=m});
+['ls','le','lw','rs','re','rw','lh','lk','la','rh','rk','ra'].forEach(k=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.11,16,12),gm);scene.add(m);joints[k]=m});
+joints.head=new THREE.Mesh(new THREE.SphereGeometry(.24,20,16),gm);scene.add(joints.head);
+const fl=new THREE.Mesh(new THREE.CircleGeometry(1.6,40),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.12}));fl.rotation.x=-Math.PI/2;fl.position.y=-1.55;scene.add(fl)}
+function bone(m,a,b){const dx=b[0]-a[0],dy=b[1]-a[1];m.position.set((a[0]+b[0])/2,(a[1]+b[1])/2,0);m.scale.y=Math.hypot(dx,dy);m.rotation.z=Math.atan2(-dx,dy)}
+const pt=(p,len,deg)=>[p[0]+len*Math.sin(deg*Math.PI/180),p[1]-len*Math.cos(deg*Math.PI/180)];
+function draw(a,t){if(use2d)return draw2d(a,t);const bob=Math.sin(t*3)*.02,pel=[0,bob],ne=[0,1+bob],ls=[-SW/2,ne[1]-.05],rs=[SW/2,ne[1]-.05],lh=[-HW,bob],rh=[HW,bob];
+const le=pt(ls,L.ua,a[0]),lw=pt(le,L.fa,a[1]),re=pt(rs,L.ua,a[2]),rw=pt(re,L.fa,a[3]),lk=pt(lh,L.th,a[4]),la=pt(lk,L.sh,a[5]),rk=pt(rh,L.th,a[6]),ra=pt(rk,L.sh,a[7]);
+bone(bones.lua,ls,le);bone(bones.lfa,le,lw);bone(bones.rua,rs,re);bone(bones.rfa,re,rw);bone(bones.lth,lh,lk);bone(bones.lsh,lk,la);bone(bones.rth,rh,rk);bone(bones.rsh,rk,ra);bone(bones.torso,pel,ne);
+const J={ls,le,lw,rs,re,rw,lh,lk,la,rh,rk,ra};for(const k in J)joints[k].position.set(J[k][0],J[k][1],0);joints.head.position.set(0,ne[1]+.3,0);
+const ang=Math.sin(t*.5)*.45;cam.position.set(Math.sin(ang)*6,.9,Math.cos(ang)*6);cam.lookAt(0,.2,0);ren.render(scene,cam)}
+let t0=performance.now();
+function anim(){requestAnimationFrame(anim);if(!document.getElementById('stage'))return;const t=(performance.now()-t0)/1000;
+if(tgt)cur=cur.map((c,i)=>c+(tgt[i]-c)*.07);draw(cur,t)}
+// ---------- Pose tracking ----------
+const BASE='https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/';
+const M=[[11,13,0],[13,15,1],[12,14,2],[14,16,3],[23,25,4],[25,27,5],[24,26,6],[26,28,7]];
+function msg(t){document.getElementById('msg').textContent=t}
+function ld(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.append(s)})}
+async function ensurePose(){if(pose)return;await ld(BASE+'pose.js');pose=new Pose({locateFile:f=>BASE+f});pose.setOptions({modelComplexity:1,smoothLandmarks:true,minDetectionConfidence:.5,minTrackingConfidence:.5});pose.onResults(onRes)}
+async function startCam(){if(camOn)return;photoImg=null;msg('Starting camera…');
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){msg('This view can’t use a camera. Try “Photo check”.');return}
+try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}});vid.srcObject=stream;await vid.play()}catch(e){msg('Live camera is blocked in this view ('+(e.name||'error')+'). Use “Photo check” instead.');return}
+try{await ensurePose();pose.setOptions({smoothLandmarks:true});camOn=true;msg('Tracking…');loop()}catch(e){msg('The pose model couldn’t load here. Use “I matched it”.')}}
+async function loop(){if(!camOn)return;try{if(vid.readyState>=2)await pose.send({image:vid});requestAnimationFrame(loop)}catch(e){camOn=false;msg('Pose tracking stopped. Use “I matched it”.')}}
+function rd(f){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)})}
+async function photo(f){if(!f)return;camOn=false;msg('Analyzing…');const img=new Image();img.src=await rd(f);await img.decode();photoImg=img;
+try{await ensurePose();pose.setOptions({smoothLandmarks:false});await pose.send({image:img})}catch(e){msg('The pose model couldn’t load here. Use “I matched it”.')}}
+function onRes(r){const im=photoImg,w=im?im.naturalWidth:vid.videoWidth,h=im?im.naturalHeight:vid.videoHeight;ov.width=w;ov.height=h;const c=ov.getContext('2d');c.clearRect(0,0,w,h);if(im)c.drawImage(im,0,0,w,h);const lm=r.poseLandmarks;
+if(!lm){if(im)msg('No person found. Step back so your whole body is in frame.');upd(0);return}
+c.strokeStyle='#22d3ee';c.lineWidth=Math.max(4,w/120);c.lineCap='round';M.forEach(([a,b])=>{if(lm[a].visibility>.4&&lm[b].visibility>.4){c.beginPath();c.moveTo(lm[a].x*w,lm[a].y*h);c.lineTo(lm[b].x*w,lm[b].y*h);c.stroke()}});
+let sum=0,n=0;M.forEach(([a,b,i])=>{if(lm[a].visibility<.4||lm[b].visibility<.4)return;const dx=-(lm[b].x-lm[a].x)*w,dy=(lm[b].y-lm[a].y)*h;const ang=Math.atan2(dx,dy)*180/Math.PI;let d=Math.abs(ang-tgt[i])%360;if(d>180)d=360-d;sum+=Math.max(0,1-d/70);n++});
+if(im&&n<5)msg('Couldn’t see enough of your body. Step back and retry.');upd(n>=5?sum/n:0)}
+function upd(s){const im=!!photoImg;score=im?s:score*.7+s*.3;const p=Math.round(score*100);document.getElementById('fill').style.width=p+'%';document.getElementById('pc').textContent=p+'%';
+if(im){if(s>=.8){best[si]=Math.max(best[si]||0,s);msg('Great match! ✨');setTimeout(()=>go(1),1500)}else if(s>0)msg('Not quite. Compare with the figure and retake.');return}
+if(score>=.8){best[si]=Math.max(best[si]||0,score);if(++hold>20){hold=0;msg('Nailed it! ✨');go(1)}}else hold=0}
+quiz();
+</script></body></html>
