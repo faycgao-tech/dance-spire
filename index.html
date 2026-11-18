@@ -431,12 +431,12 @@ vs.replaceChildren(...VID[rid].map(([id, title]) => {
 }));
 }
 
-let phase='manual', selectedVideo='', generation=0, tutorialTimer, capture, referenceModel, player, apiPromise, poseScript;
+let phase='manual', selectedVideo='', generation=0, photoAdvanceTimer, capture, referenceModel, player, apiPromise, poseScript;
 const control=()=>document.getElementById('practiceControls');
 function stopPractice(){
   clearLocalClip();
   generation++;
-  clearInterval(tutorialTimer);
+  clearTimeout(photoAdvanceTimer);
   capture?.getTracks().forEach(track=>track.stop()); capture=null;
   if(referenceModel){const model=referenceModel; referenceModel=null;Promise.resolve(model.close()).catch(()=>{})}
   if(player){player.destroy();player=null}
@@ -444,17 +444,12 @@ function stopPractice(){
 }
 function setManualControls(enabled){for(const id of ['pv','nx','mm','rp'])document.getElementById(id).disabled=!enabled}
 function beginTutorial(){
-  phase='tutorial'; setManualControls(false); si=0;best=[];show();
+  phase='manual';setManualControls(true);si=0;best=[];show();
   document.getElementById('sum').replaceChildren();
-  control().textContent='Tutorial · Follow the four poses.';
-  clearInterval(tutorialTimer);
-  tutorialTimer=setInterval(()=>{
-    if(si<3){si++;show();return}
-    clearInterval(tutorialTimer);practiceReady('Tutorial complete.');
-  },2000);
+  control().textContent='Follow each pose at your own pace. Hold a camera match, check a photo, or choose “I matched it” or “Next” when ready.';
 }
 function practiceReady(message){
-  phase='ready';
+  phase='ready';setManualControls(false);
   const share=!!(window.CropTarget && navigator.mediaDevices?.getDisplayMedia && window.BrowserCaptureMediaStreamTrack?.prototype.cropTo);
   const hint=share?'':' Choose a video file of the selected dance for the 30-second match.';
   control().replaceChildren(document.createTextNode(message+hint+' '));
@@ -507,7 +502,7 @@ function openClip(file){
   const id=selectedVideo;
   const finish=message=>{
     if(!current())return;
-    playV(id);clearInterval(tutorialTimer);practiceReady(message);
+    playV(id);practiceReady(message);
   };
   const video=document.createElement('video');localVideo=video;
   video.controls=true;video.playsInline=true;video.style.width='100%';
@@ -551,7 +546,7 @@ async function startPractice(){
   const frame=document.querySelector('#vf iframe');
   const reset=message=>{
     if(!current())return;
-    const id=selectedVideo;stopPractice();playV(id);clearInterval(tutorialTimer);practiceReady(message);
+    const id=selectedVideo;stopPractice();playV(id);practiceReady(message);
   };
   control().replaceChildren(document.createTextNode('Choose this Dance Spire tab to track the video. '),btn('Cancel',()=>reset('Practice stopped.')));
   try{
@@ -596,10 +591,10 @@ const a=document.getElementById('oy');a.href='https://www.youtube.com/watch?v='+
 function addYT(){const i=document.getElementById('yt'),m=i.value.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);if(!m){i.value='';i.placeholder='That doesn’t look like a YouTube link';return}
 VID[rid].push([m[1],'Your video '+(VID[rid].length+1)]);renderVids();playV(m[1]);i.value=''}
 function A0(){return [-8,-5,8,5,-4,-2,4,2]}
-function show(){const s=R[rid].steps.slice(0,4);tgt=s[si][2];hold=0;
+function show(){clearTimeout(photoAdvanceTimer);score=0;document.getElementById('fill').style.width='0%';document.getElementById('pc').textContent='0%';const s=R[rid].steps.slice(0,4);tgt=s[si][2];hold=0;
 document.getElementById('st').innerHTML=s.map((x,i)=>`<span class="${i===si?'on':best[i]?'done':''}">${i+1}. ${x[0]}</span>`).join('');
 document.getElementById('sn').textContent=`Step ${si+1}: ${s[si][0]}`;document.getElementById('sd').textContent=s[si][1]}
-function go(d){if(phase!=='manual')return;const n=4;if(si+d>=n){finish();return}si=Math.max(0,si+d);show()}
+function go(d){if(phase!=='manual')return;const n=4;if(si+d>=n){if(selectedVideo)practiceReady('Tutorial complete.');else finish();return}si=Math.max(0,si+d);show()}
 function finish(){const v=R[rid].steps.slice(0,4).map((_,i)=>best[i]||0),av=Math.round(v.reduce((a,b)=>a+b,0)/v.length*100);
 document.getElementById('sum').innerHTML=`<div class="card"><h3>🎉 Routine complete!</h3><p>Average best match: <b>${av}%</b></p><button id="ag">Try again</button></div>`;document.getElementById('ag').onclick=()=>{best=[];si=0;show();document.getElementById('sum').innerHTML=''}}
 // ---------- 3D figure ----------
@@ -650,7 +645,7 @@ let sum=0,n=0;M.forEach(([a,b,i])=>{if(lm[a].visibility<.4||lm[b].visibility<.4)
 if(im&&n<5)msg('Couldn’t see enough of your body. Step back and retry.');upd(n>=5?sum/n:0)}
 function upd(s){const im=!!photoImg;score=im?s:score*.7+s*.3;const p=Math.round(score*100);document.getElementById('fill').style.width=p+'%';document.getElementById('pc').textContent=p+'%';
 if(phase!=='manual')return;
-if(im){if(s>=.8){best[si]=Math.max(best[si]||0,s);msg('Great match! ✨');setTimeout(()=>go(1),1500)}else if(s>0)msg('Not quite. Compare with the figure and retake.');return}
+if(im){if(s>=.8){best[si]=Math.max(best[si]||0,s);msg('Great match! ✨');clearTimeout(photoAdvanceTimer);photoAdvanceTimer=setTimeout(()=>go(1),1500)}else if(s>0)msg('Not quite. Compare with the figure and retake.');return}
 if(score>=.8){best[si]=Math.max(best[si]||0,score);if(++hold>20){hold=0;msg('Nailed it! ✨');go(1)}}else hold=0}
 quiz();
 </script></body></html>
